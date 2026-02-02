@@ -1,0 +1,45 @@
+# ReceptAI Backend Dependencies
+
+# FastAPI framework (оптимизирован для Pydantic v2)
+fastapi==0.110.0
+uvicorn[standard]==0.27.0
+
+# ML/AI dependencies
+# ВАЖНО: YOLOv10 требует ultralytics >= 8.2.0
+ultralytics==8.2.2
+
+# PyTorch - фиксированные версии для воспроизводимости
+# Совместимы с YOLOv10, работают на macOS/Windows
+torch==2.2.1
+torchvision==0.17.1
+
+# OpenCV headless - лучше для backend (без GUI, меньше конфликтов на macOS)
+opencv-python-headless>=4.8.0
+
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# LLM for recipe generation
+openai>=1.10.0
+# LangChain - фиксированная версия для стабильности ВКР
+langchain==0.1.13
+
+# API utilities
+python-multipart>=0.0.6
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database (optional for storing recipes)
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+# HTTP client
+httpx>=0.26.0
+aiofiles>=23.2.0
+
+# Development
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
