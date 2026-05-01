@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Image, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../theme';
 import { Button } from '../../components/Button';
@@ -17,10 +17,12 @@ export default function LoginScreen({ navigation }: any) {
             return;
         }
         setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        login(email);
-        setLoading(false);
+        try {
+            await login(email, password);
+        } catch {
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

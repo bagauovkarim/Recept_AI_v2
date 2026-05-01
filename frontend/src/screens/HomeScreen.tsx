@@ -4,11 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { theme } from '../theme';
 import { Button } from '../components/Button';
-import { Loader } from '../components/Loader';
 
 export default function HomeScreen({ navigation }: any) {
     const [image, setImage] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -47,24 +45,13 @@ export default function HomeScreen({ navigation }: any) {
         }
     };
 
-    const handleRecognize = async () => {
+    const handleRecognize = () => {
         if (!image) return;
-
-        setLoading(true);
-        try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            navigation.navigate('RecognizedProducts', { imageUri: image });
-        } catch (error) {
-            Alert.alert('ОШИБКА', 'НЕ УДАЛОСЬ РАСПОЗНАТЬ');
-        } finally {
-            setLoading(false);
-        }
+        navigation.navigate('RecognizedProducts', { imageUri: image });
     };
 
     return (
         <SafeAreaView style={styles.container}>
-            <Loader visible={loading} text="СКАНИРОВАНИЕ..." />
-
             <View style={styles.header}>
                 <Text style={styles.title}>RECEPTAI</Text>
                 <Text style={styles.subtitle}>ТВОЙ ШЕФ-ПОВАР</Text>
@@ -152,13 +139,12 @@ const styles = StyleSheet.create({
     },
     placeholder: {
         width: '100%',
-        height: '80%', // Use height percentage to fit content area better
+        height: '80%',
         backgroundColor: theme.colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
         borderColor: theme.colors.border,
-        // Removed dashed style for a cleaner, solid look
     },
     placeholderText: {
         fontSize: 64,

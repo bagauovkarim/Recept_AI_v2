@@ -6,7 +6,6 @@ import { theme } from '../theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { View, Text } from 'react-native';
 
-// Screens
 import HomeScreen from '../screens/HomeScreen';
 import RecognizedProductsScreen from '../screens/RecognizedProductsScreen';
 import RecipeListScreen from '../screens/RecipeListScreen';
@@ -17,14 +16,15 @@ import HistoryScreen from '../screens/HistoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CookingModeScreen from '../screens/CookingModeScreen';
 
-// Types
+import type { DishOut } from '../services/api';
+
 export type RootStackParamList = {
     Auth: undefined;
     Main: undefined;
     RecognizedProducts: { imageUri: string };
     RecipeList: { products: string[] };
-    RecipeDetail: { recipeId: string; recipe: any };
-    CookingMode: { steps: string[], recipeName: string };
+    RecipeDetail: { dish: DishOut; userIngredients: string[] };
+    CookingMode: { steps: string[]; dishId: number; recipeName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,7 +59,7 @@ function MainTabNavigator() {
                     else if (route.name === 'History') iconName = '📜';
                     else if (route.name === 'Profile') iconName = '👤';
 
-                    return <Text style={{ fontSize: 24 }}>{iconName}</Text>; // Using emojis for MVP simplicity
+                    return <Text style={{ fontSize: 24 }}>{iconName}</Text>;
                 },
             })}
         >
@@ -99,7 +99,7 @@ function RootNavigator() {
                     backgroundColor: theme.colors.background,
                 },
                 headerShadowVisible: false,
-                animation: 'slide_from_right', // Default smooth slide transition
+                animation: 'slide_from_right',
                 animationDuration: 250,
             }}
         >

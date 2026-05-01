@@ -1,13 +1,13 @@
 export const theme = {
     colors: {
-        background: '#000000', // True Black
-        surface: '#1A1A1A',     // Dark Grey for variety
-        primary: '#FFFFFF',     // White
-        secondary: '#333333',   // Dark Grey
-        text: '#FFFFFF',        // White Text
-        textSecondary: '#888888', // Grey Text
+        background: '#000000',
+        surface: '#1A1A1A',
+        primary: '#FFFFFF',
+        secondary: '#333333',
+        text: '#FFFFFF',
+        textSecondary: '#888888',
         border: '#333333',
-        success: '#FFFFFF',     // Keep monochrome where possible
+        success: '#FFFFFF',
         error: '#FFFFFF',
         overlay: 'rgba(0,0,0,0.9)',
     },
@@ -20,10 +20,10 @@ export const theme = {
         xxl: 48,
     },
     borderRadius: {
-        s: 0,   // Sharp corners
-        m: 4,   // Slightly rounded
+        s: 0,
+        m: 4,
         l: 8,
-        round: 9999, // For avatars only
+        round: 9999,
     },
     typography: {
         h1: {

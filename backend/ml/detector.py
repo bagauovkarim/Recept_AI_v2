@@ -1,7 +1,3 @@
-"""
-YOLO-based food product detector.
-Loads the trained model and runs inference on images.
-"""
 from ultralytics import YOLO
 from PIL import Image
 from db import get_settings
@@ -9,12 +5,10 @@ from schemas import DetectedProduct
 
 settings = get_settings()
 
-# Lazy-load model
 _model = None
 
 
 def _get_model() -> YOLO:
-    """Load YOLO model (singleton)."""
     global _model
     if _model is None:
         _model = YOLO(settings.YOLO_MODEL_PATH)
@@ -22,15 +16,11 @@ def _get_model() -> YOLO:
 
 
 def detect_products(image: Image.Image) -> list[DetectedProduct]:
-    """
-    Run YOLO inference on a PIL image.
-    Returns a list of detected products with confidence.
-    """
     model = _get_model()
     results = model.predict(source=image, conf=settings.CONFIDENCE_THRESHOLD, verbose=False)
 
     products = []
-    seen = set()  # Avoid duplicates
+    seen = set()
 
     for result in results:
         for box in result.boxes:
@@ -45,6 +35,5 @@ def detect_products(image: Image.Image) -> list[DetectedProduct]:
                     confidence=round(confidence, 2),
                 ))
 
-    # Sort by confidence descending
     products.sort(key=lambda p: p.confidence, reverse=True)
     return products

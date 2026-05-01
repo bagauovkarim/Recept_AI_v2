@@ -1,4 +1,3 @@
-"""Dish model."""
 from sqlalchemy import Column, Integer, String, CheckConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from db import Base
@@ -9,7 +8,7 @@ class Dish(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    ingredients = Column(JSONB, nullable=False)  # ["egg", "milk", "cheese"]
+    ingredients = Column(JSONB, nullable=False)
     difficulty = Column(
         String,
         CheckConstraint("difficulty IN ('easy', 'medium', 'hard')"),

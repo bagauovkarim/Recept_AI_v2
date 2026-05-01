@@ -19,7 +19,7 @@ export const Card: React.FC<CardProps> = ({ children, style, variant = 'default'
 const styles = StyleSheet.create({
     card: {
         backgroundColor: theme.colors.surface,
-        borderRadius: theme.borderRadius.m, // Minimal rounding
+        borderRadius: theme.borderRadius.m,
         padding: theme.spacing.m,
         marginBottom: theme.spacing.m,
         borderWidth: 1,

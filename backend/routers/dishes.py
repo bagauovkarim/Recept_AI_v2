@@ -1,6 +1,3 @@
-"""
-Dishes router: find dishes by ingredients, generate recipe.
-"""
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -23,15 +20,6 @@ async def find_dishes(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Подбор блюд по списку ингредиентов пользователя.
-
-    Алгоритм:
-    1. Получить все блюда из БД
-    2. Для каждого блюда вычислить недостающие ингредиенты
-    3. Отфильтровать блюда с missing_count > 2
-    4. Отсортировать: missing_count ASC, difficulty ASC
-    """
     result = await db.execute(select(Dish))
     all_dishes = result.scalars().all()
 
@@ -52,7 +40,6 @@ async def find_dishes(
                 missing_ingredients=sorted(missing),
             ))
 
-    # Sort: missing_count ASC, then difficulty ASC
     matched.sort(key=lambda d: (d.missing_count, DIFFICULTY_ORDER.get(d.difficulty, 99)))
     return matched
 
@@ -62,6 +49,5 @@ async def generate_recipe(
     data: GenerateRecipeRequest,
     current_user: User = Depends(get_current_user),
 ):
-    """Генерация рецепта через ChatGPT. Не сохраняется в БД."""
     recipe = await generate_recipe_text(data.dish_title, data.ingredients)
     return recipe

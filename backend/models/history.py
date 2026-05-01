@@ -1,4 +1,3 @@
-"""CookingHistory model."""
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, func
 from db import Base
 

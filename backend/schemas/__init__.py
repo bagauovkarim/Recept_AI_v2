@@ -1,10 +1,8 @@
-"""Pydantic schemas for request/response validation."""
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
 
-# ─── Auth ───────────────────────────────────────────────
 class UserRegister(BaseModel):
     email: str = Field(..., min_length=5, max_length=100)
     password: str = Field(..., min_length=6, max_length=100)
@@ -28,13 +26,11 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
-# ─── Products ──────────────────────────────────────────
 class DetectedProduct(BaseModel):
     name: str
     confidence: float
 
 
-# ─── Dishes ────────────────────────────────────────────
 class DishFindRequest(BaseModel):
     ingredients: list[str]
 
@@ -47,7 +43,6 @@ class DishOut(BaseModel):
     missing_ingredients: list[str]
 
 
-# ─── Recipe Generation ─────────────────────────────────
 class GenerateRecipeRequest(BaseModel):
     dish_title: str
     ingredients: list[str]
@@ -61,7 +56,6 @@ class GeneratedRecipe(BaseModel):
     servings: str
 
 
-# ─── History ───────────────────────────────────────────
 class HistoryCreate(BaseModel):
     dish_id: int
 

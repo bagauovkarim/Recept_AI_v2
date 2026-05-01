@@ -1,93 +1,81 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Alert, TextInput } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme';
-import { api } from '../services/api';
-import { Loader } from '../components/Loader';
+import { dishesAPI, DishOut } from '../services/api';
 import { Card } from '../components/Card';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 
-interface Recipe {
-    id: string;
-    name: string;
-    time: string;
-    difficulty: string;
-    missingIngredients: string[];
-    image: string;
-}
+const DIFFICULTY_LABEL: Record<DishOut['difficulty'], string> = {
+    easy: 'ЛЕГКО',
+    medium: 'СРЕДНЕ',
+    hard: 'СЛОЖНО',
+};
 
 export default function RecipeListScreen({ navigation, route }: any) {
-    const { products } = route.params;
-    const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
+    const { products } = route.params as { products: string[] };
+    const [dishes, setDishes] = useState<DishOut[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterDifficulty, setFilterDifficulty] = useState<string | null>(null);
+    const [filterDifficulty, setFilterDifficulty] = useState<DishOut['difficulty'] | null>(null);
 
     useEffect(() => {
-        fetchRecipes();
+        fetchDishes();
     }, []);
 
-    useEffect(() => {
-        filterRecipes();
-    }, [searchQuery, filterDifficulty, recipes]);
-
-    const fetchRecipes = async () => {
+    const fetchDishes = async () => {
         try {
-            const result = await api.generateRecipes(products);
-            setRecipes(result);
-            setFilteredRecipes(result);
-        } catch (error) {
-            Alert.alert('Ошибка', 'Не удалось найти рецепты');
+            const result = await dishesAPI.find(products);
+            setDishes(result);
+        } catch (error: any) {
+            const message = error?.response?.data?.detail || 'Не удалось найти рецепты';
+            Alert.alert('Ошибка', message);
         } finally {
             setLoading(false);
         }
     };
 
-    const filterRecipes = () => {
-        let result = recipes;
-
+    const filtered = useMemo(() => {
+        let result = dishes;
         if (searchQuery) {
-            result = result.filter(r =>
-                r.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
+            const q = searchQuery.toLowerCase();
+            result = result.filter(d => d.title.toLowerCase().includes(q));
         }
-
         if (filterDifficulty) {
-            result = result.filter(r => r.difficulty === filterDifficulty);
+            result = result.filter(d => d.difficulty === filterDifficulty);
         }
+        return result;
+    }, [dishes, searchQuery, filterDifficulty]);
 
-        setFilteredRecipes(result);
-    };
-
-    const renderRecipe = ({ item }: { item: Recipe }) => (
+    const renderRecipe = ({ item }: { item: DishOut }) => (
         <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('RecipeDetail', {
+                dish: item,
+                userIngredients: products,
+            })}
         >
             <Card style={styles.card}>
-                <Image source={{ uri: item.image }} style={styles.image} />
-                <View style={styles.content}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    <View style={styles.details}>
-                        <Text style={styles.detailText}>⏱ {item.time}</Text>
-                        <Text style={styles.detailText}>📊 {item.difficulty}</Text>
-                    </View>
-                    {item.missingIngredients.length > 0 && (
-                        <Text style={styles.missing}>
-                            Нужно докупить: {item.missingIngredients.join(', ')}
-                        </Text>
-                    )}
+                <View style={styles.cardHeader}>
+                    <Text style={styles.name}>{item.title}</Text>
+                    <Text style={styles.difficulty}>{DIFFICULTY_LABEL[item.difficulty] || item.difficulty}</Text>
                 </View>
+                {item.missing_ingredients.length > 0 ? (
+                    <Text style={styles.missing}>
+                        Нужно докупить ({item.missing_count}): {item.missing_ingredients.join(', ')}
+                    </Text>
+                ) : (
+                    <Text style={styles.allHave}>Все ингредиенты у тебя есть ✓</Text>
+                )}
             </Card>
         </TouchableOpacity>
     );
 
     const renderSkeleton = () => (
         <View>
-            <SkeletonLoader height={200} style={{ marginBottom: 16 }} />
-            <SkeletonLoader height={200} style={{ marginBottom: 16 }} />
-            <SkeletonLoader height={200} style={{ marginBottom: 16 }} />
+            <SkeletonLoader height={120} style={{ marginBottom: 16 }} />
+            <SkeletonLoader height={120} style={{ marginBottom: 16 }} />
+            <SkeletonLoader height={120} style={{ marginBottom: 16 }} />
         </View>
     );
 
@@ -96,7 +84,7 @@ export default function RecipeListScreen({ navigation, route }: any) {
             <View style={styles.header}>
                 <Text style={styles.title}>РЕЦЕПТЫ</Text>
                 <Text style={styles.subtitle}>
-                    {loading ? 'ПОДБИРАЕМ ЛУЧШЕЕ...' : `НАЙДЕНО ${filteredRecipes.length} БЛЮД`}
+                    {loading ? 'ПОДБИРАЕМ ЛУЧШЕЕ...' : `НАЙДЕНО ${filtered.length} БЛЮД`}
                 </Text>
 
                 <View style={styles.searchContainer}>
@@ -110,19 +98,21 @@ export default function RecipeListScreen({ navigation, route }: any) {
                 </View>
 
                 <View style={styles.filters}>
-                    {['ЛЕГКО', 'СРЕДНЕ', 'СЛОЖНО'].map(diff => (
+                    {(['easy', 'medium', 'hard'] as const).map(diff => (
                         <TouchableOpacity
                             key={diff}
                             style={[
                                 styles.chip,
-                                filterDifficulty === diff && styles.chipActive
+                                filterDifficulty === diff && styles.chipActive,
                             ]}
                             onPress={() => setFilterDifficulty(filterDifficulty === diff ? null : diff)}
                         >
                             <Text style={[
                                 styles.chipText,
-                                filterDifficulty === diff && styles.chipTextActive
-                            ]}>{diff}</Text>
+                                filterDifficulty === diff && styles.chipTextActive,
+                            ]}>
+                                {DIFFICULTY_LABEL[diff]}
+                            </Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -134,12 +124,15 @@ export default function RecipeListScreen({ navigation, route }: any) {
                 </View>
             ) : (
                 <FlatList
-                    data={filteredRecipes}
-                    keyExtractor={item => item.id}
+                    data={filtered}
+                    keyExtractor={item => String(item.id)}
                     renderItem={renderRecipe}
                     contentContainerStyle={styles.list}
                     ListEmptyComponent={
-                        <Text style={styles.emptyText}>РЕЦЕПТЫ НЕ НАЙДЕНЫ</Text>
+                        <Text style={styles.emptyText}>
+                            РЕЦЕПТЫ НЕ НАЙДЕНЫ.{'\n'}
+                            ПОПРОБУЙ ДРУГОЙ НАБОР ПРОДУКТОВ.
+                        </Text>
                     }
                 />
             )}
@@ -195,7 +188,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     chipTextActive: {
-        color: '#FFF',
+        color: '#000',
         fontWeight: '600',
     },
     list: {
@@ -203,37 +196,37 @@ const styles = StyleSheet.create({
         paddingBottom: theme.spacing.xl,
     },
     card: {
-        padding: 0,
-        overflow: 'hidden',
-    },
-    image: {
-        width: '100%',
-        height: 150,
-    },
-    content: {
         padding: theme.spacing.m,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.s,
     },
     name: {
         ...theme.typography.h3,
-        marginBottom: theme.spacing.s,
+        flex: 1,
     },
-    details: {
-        flexDirection: 'row',
-        gap: theme.spacing.m,
-        marginBottom: theme.spacing.s,
-    },
-    detailText: {
+    difficulty: {
         ...theme.typography.caption,
-        fontSize: 14,
+        fontSize: 12,
+        color: theme.colors.textSecondary,
+        marginLeft: theme.spacing.s,
     },
     missing: {
         fontSize: 13,
-        color: theme.colors.secondary,
-        fontWeight: '500',
+        color: theme.colors.textSecondary,
+    },
+    allHave: {
+        fontSize: 13,
+        color: theme.colors.primary,
+        fontWeight: '600',
     },
     emptyText: {
         textAlign: 'center',
         color: theme.colors.textSecondary,
         marginTop: theme.spacing.xl,
+        lineHeight: 20,
     },
 });

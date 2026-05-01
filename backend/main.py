@@ -1,6 +1,3 @@
-"""
-ReceptAI Backend — FastAPI application entry point.
-"""
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +8,6 @@ from routers import auth, dishes, products, history
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables on startup (dev only)."""
     await create_tables()
     yield
 
@@ -23,7 +19,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — разрешаем все origins для разработки
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,7 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Подключение роутеров
 app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(dishes.router)

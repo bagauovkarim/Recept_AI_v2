@@ -1,55 +1,76 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { theme } from '../theme';
 import { Button } from '../components/Button';
+import { dishesAPI, historyAPI, GeneratedRecipe, DishOut } from '../services/api';
 
 export default function RecipeDetailScreen({ route, navigation }: any) {
-    const { recipe } = route.params;
+    const { dish, userIngredients } = route.params as { dish: DishOut; userIngredients: string[] };
+    const [recipe, setRecipe] = useState<GeneratedRecipe | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Mock instructions if not present in passed object (since api.ts stub is simple)
-    // In real app, we might need to fetch details by ID if list logic is separate
-    const instructions = [
-        'Подготовьте все ингредиенты.',
-        'Нарежьте овощи кубиками.',
-        'Смешайте ингредиенты в большой миске.',
-        'Добавьте специи по вкусу.',
-        'Подавайте блюдо охлажденным.'
-    ];
+    useEffect(() => {
+        generate();
+    }, []);
+
+    const generate = async () => {
+        try {
+            setLoading(true);
+            const allIngredients = [
+                ...new Set([...userIngredients, ...dish.missing_ingredients]),
+            ];
+            const r = await dishesAPI.generateRecipe(dish.title, allIngredients);
+            setRecipe(r);
+        } catch (error: any) {
+            const message = error?.response?.data?.detail || 'Не удалось сгенерировать рецепт';
+            Alert.alert('Ошибка', message);
+            navigation.goBack();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading || !recipe) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={styles.loadingText}>Готовим рецепт...</Text>
+            </View>
+        );
+    }
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            <Image source={{ uri: recipe.image }} style={styles.image} />
-
             <View style={styles.section}>
-                <Text style={styles.title}>{recipe.name}</Text>
+                <Text style={styles.title}>{recipe.title}</Text>
                 <View style={styles.badges}>
                     <View style={styles.badge}>
-                        <Text style={styles.badgeText}>⏱ {recipe.time}</Text>
+                        <Text style={styles.badgeText}>⏱ {recipe.cooking_time}</Text>
                     </View>
                     <View style={styles.badge}>
-                        <Text style={styles.badgeText}>📊 {recipe.difficulty}</Text>
+                        <Text style={styles.badgeText}>🍽 {recipe.servings}</Text>
                     </View>
                 </View>
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Ингредиенты</Text>
-                {recipe.ingredients.map((ing: string, index: number) => (
+                {recipe.ingredients.map((ing, index) => (
                     <View key={index} style={styles.row}>
                         <Text style={styles.bullet}>•</Text>
-                        <Text style={[
-                            styles.text,
-                            recipe.missingIngredients.includes(ing) && styles.missingText
-                        ]}>
-                            {ing} {recipe.missingIngredients.includes(ing) && '(нет в наличии)'}
-                        </Text>
+                        <Text style={styles.text}>{ing}</Text>
                     </View>
                 ))}
+                {dish.missing_ingredients.length > 0 && (
+                    <Text style={styles.missingNote}>
+                        Не хватает: {dish.missing_ingredients.join(', ')}
+                    </Text>
+                )}
             </View>
 
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Приготовление</Text>
-                {instructions.map((step, index) => (
+                {recipe.steps.map((step, index) => (
                     <View key={index} style={styles.step}>
                         <View style={styles.stepNumber}>
                             <Text style={styles.stepNumberText}>{index + 1}</Text>
@@ -63,15 +84,11 @@ export default function RecipeDetailScreen({ route, navigation }: any) {
                 <Button
                     title="НАЧАТЬ ГОТОВИТЬ"
                     onPress={() => navigation.navigate('CookingMode', {
-                        steps: instructions,
-                        recipeName: recipe.name
+                        steps: recipe.steps,
+                        dishId: dish.id,
+                        recipeName: recipe.title,
                     })}
                     style={{ marginBottom: 10 }}
-                />
-                <Button
-                    title="Приготовил! 😋"
-                    onPress={() => navigation.goBack()}
-                    variant="outline"
                 />
             </View>
         </ScrollView>
@@ -83,12 +100,18 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: theme.colors.background,
     },
+    loadingContainer: {
+        flex: 1,
+        backgroundColor: theme.colors.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: theme.spacing.l,
+    },
+    loadingText: {
+        ...theme.typography.body,
+    },
     content: {
         paddingBottom: 40,
-    },
-    image: {
-        width: '100%',
-        height: 250,
     },
     section: {
         padding: theme.spacing.l,
@@ -116,7 +139,6 @@ const styles = StyleSheet.create({
     sectionTitle: {
         ...theme.typography.h2,
         marginBottom: theme.spacing.m,
-        color: theme.colors.text,
     },
     row: {
         flexDirection: 'row',
@@ -132,8 +154,10 @@ const styles = StyleSheet.create({
         flex: 1,
         lineHeight: 22,
     },
-    missingText: {
-        color: theme.colors.secondary,
+    missingNote: {
+        ...theme.typography.caption,
+        marginTop: theme.spacing.m,
+        color: theme.colors.textSecondary,
     },
     step: {
         flexDirection: 'row',
@@ -150,7 +174,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     stepNumberText: {
-        color: '#FFF',
+        color: '#000',
         fontWeight: 'bold',
         fontSize: 14,
     },

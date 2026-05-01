@@ -1,19 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, Alert } from 'react-native';
 import { theme } from '../theme';
 import { Button } from '../components/Button';
+import { historyAPI } from '../services/api';
 
 const { width } = Dimensions.get('window');
 
 export default function CookingModeScreen({ route, navigation }: any) {
-    const { steps, recipeName } = route.params;
+    const { steps, dishId, recipeName } = route.params as { steps: string[]; dishId: number; recipeName: string };
     const [currentStep, setCurrentStep] = useState(0);
+    const [saving, setSaving] = useState(false);
+
+    const finish = async () => {
+        if (saving) return;
+        setSaving(true);
+        try {
+            await historyAPI.create(dishId);
+        } catch (error: any) {
+            Alert.alert('Внимание', 'Не удалось записать в историю, но блюдо приготовлено!');
+        } finally {
+            setSaving(false);
+            navigation.navigate('Main', { screen: 'History' });
+        }
+    };
 
     const handleNext = () => {
         if (currentStep < steps.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
-            navigation.navigate('Main', { screen: 'History' }); // Open History tab
+            finish();
         }
     };
 
@@ -25,7 +40,6 @@ export default function CookingModeScreen({ route, navigation }: any) {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
                     <Text style={styles.closeIcon}>✕</Text>
@@ -34,12 +48,10 @@ export default function CookingModeScreen({ route, navigation }: any) {
                 <Text style={styles.stepIndicator}>{currentStep + 1} / {steps.length}</Text>
             </View>
 
-            {/* Main Step Content */}
             <View style={styles.content}>
                 <Text style={styles.stepText}>{steps[currentStep]}</Text>
             </View>
 
-            {/* Navigation Controls */}
             <View style={styles.footer}>
                 <Button
                     title="◄ НАЗАД"
@@ -61,7 +73,7 @@ export default function CookingModeScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000', // True Black for immersion
+        backgroundColor: '#000',
     },
     header: {
         padding: theme.spacing.m,
@@ -97,7 +109,7 @@ const styles = StyleSheet.create({
     },
     stepText: {
         ...theme.typography.h1,
-        fontSize: 32, // Huge text
+        fontSize: 32,
         textAlign: 'center',
         lineHeight: 40,
     },

@@ -6,21 +6,32 @@ import { Button } from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterScreen({ navigation }: any) {
-    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const { register } = useAuth();
     const [loading, setLoading] = useState(false);
 
     const handleRegister = async () => {
-        if (!name || !email || !password) {
+        if (!email || !password || !confirmPassword) {
             Alert.alert('Ошибка', 'Заполните все поля');
             return;
         }
+        if (password.length < 6) {
+            Alert.alert('Ошибка', 'Пароль должен быть не менее 6 символов');
+            return;
+        }
+        if (password !== confirmPassword) {
+            Alert.alert('Ошибка', 'Пароли не совпадают');
+            return;
+        }
         setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        register(name, email);
-        setLoading(false);
+        try {
+            await register(email, password);
+        } catch {
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -37,13 +48,6 @@ export default function RegisterScreen({ navigation }: any) {
                 <View style={styles.form}>
                     <TextInput
                         style={styles.input}
-                        placeholder="Имя"
-                        placeholderTextColor={theme.colors.textSecondary}
-                        value={name}
-                        onChangeText={setName}
-                    />
-                    <TextInput
-                        style={styles.input}
                         placeholder="Email"
                         placeholderTextColor={theme.colors.textSecondary}
                         value={email}
@@ -57,6 +61,14 @@ export default function RegisterScreen({ navigation }: any) {
                         placeholderTextColor={theme.colors.textSecondary}
                         value={password}
                         onChangeText={setPassword}
+                        secureTextEntry
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Подтвердите пароль"
+                        placeholderTextColor={theme.colors.textSecondary}
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
                         secureTextEntry
                     />
 

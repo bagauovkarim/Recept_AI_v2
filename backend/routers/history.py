@@ -1,6 +1,3 @@
-"""
-History router: save and retrieve cooking history.
-"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -22,8 +19,6 @@ async def create_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Сохранить приготовление в историю."""
-    # Проверить, что блюдо существует
     dish_result = await db.execute(select(Dish).where(Dish.id == data.dish_id))
     dish = dish_result.scalar_one_or_none()
     if not dish:
@@ -47,7 +42,6 @@ async def get_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Получить историю приготовлений текущего пользователя."""
     result = await db.execute(
         select(CookingHistory, Dish.title)
         .join(Dish, CookingHistory.dish_id == Dish.id)

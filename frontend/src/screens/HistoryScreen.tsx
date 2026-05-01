@@ -1,38 +1,60 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../theme';
 import { Card } from '../components/Card';
+import { historyAPI, HistoryEntry } from '../services/api';
 
-// Mock history data
-const HISTORY_DATA = [
-    {
-        id: '1',
-        name: 'Салат Капрезе',
-        date: 'Сегодня',
-        image: 'https://images.unsplash.com/photo-1529312266912-b33cf6227e24?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    },
-    {
-        id: '2',
-        name: 'Паста Карбонара',
-        date: 'Вчера',
-        image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    },
-    {
-        id: '3',
-        name: 'Омлет с овощами',
-        date: '2 дня назад',
-        image: 'https://images.unsplash.com/photo-1510693206972-df098062cb71?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    },
-];
+function formatDate(iso: string): string {
+    const d = new Date(iso);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const sameYesterday = d.toDateString() === yesterday.toDateString();
+
+    const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    if (sameDay) return `Сегодня в ${time}`;
+    if (sameYesterday) return `Вчера в ${time}`;
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ` в ${time}`;
+}
 
 export default function HistoryScreen() {
-    const renderItem = ({ item }: { item: typeof HISTORY_DATA[0] }) => (
+    const [entries, setEntries] = useState<HistoryEntry[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchHistory = useCallback(async () => {
+        try {
+            setError(null);
+            const data = await historyAPI.getAll();
+            setEntries(data);
+        } catch (e: any) {
+            setError(e?.response?.data?.detail || 'Не удалось загрузить историю');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchHistory();
+        }, [fetchHistory])
+    );
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchHistory();
+    };
+
+    const renderItem = ({ item }: { item: HistoryEntry }) => (
         <Card style={styles.card}>
-            <Image source={{ uri: item.image }} style={styles.image} />
-            <View style={styles.content}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.date}>Приготовлено: {item.date}</Text>
+            <View style={styles.cardContent}>
+                <Text style={styles.name}>{item.dish_title || `Блюдо #${item.dish_id}`}</Text>
+                <Text style={styles.date}>{formatDate(item.cooked_at)}</Text>
             </View>
         </Card>
     );
@@ -44,12 +66,35 @@ export default function HistoryScreen() {
                 <Text style={styles.subtitle}>Ваши кулинарные достижения</Text>
             </View>
 
-            <FlatList
-                data={HISTORY_DATA}
-                keyExtractor={item => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={styles.list}
-            />
+            {loading && entries.length === 0 ? (
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                </View>
+            ) : error ? (
+                <View style={styles.center}>
+                    <Text style={styles.errorText}>{error}</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={entries}
+                    keyExtractor={item => String(item.id)}
+                    renderItem={renderItem}
+                    contentContainerStyle={styles.list}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={theme.colors.primary}
+                        />
+                    }
+                    ListEmptyComponent={
+                        <Text style={styles.emptyText}>
+                            Пока ничего не приготовлено.{'\n'}
+                            Сделай фото холодильника и начни!
+                        </Text>
+                    }
+                />
+            )}
         </SafeAreaView>
     );
 }
@@ -69,31 +114,43 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         ...theme.typography.body,
+        color: theme.colors.textSecondary,
     },
     list: {
         paddingHorizontal: theme.spacing.m,
         paddingBottom: theme.spacing.xl,
+        flexGrow: 1,
     },
     card: {
-        padding: 0,
-        overflow: 'hidden',
-        flexDirection: 'row',
-    },
-    image: {
-        width: 100,
-        height: 100,
-    },
-    content: {
-        flex: 1,
         padding: theme.spacing.m,
-        justifyContent: 'center',
+        marginBottom: theme.spacing.s,
+    },
+    cardContent: {
+        flexDirection: 'column',
     },
     name: {
         ...theme.typography.h3,
         fontSize: 16,
-        marginBottom: theme.spacing.s,
+        marginBottom: theme.spacing.xs,
     },
     date: {
         ...theme.typography.caption,
+    },
+    center: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: theme.spacing.l,
+    },
+    errorText: {
+        ...theme.typography.body,
+        textAlign: 'center',
+        color: theme.colors.textSecondary,
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: theme.colors.textSecondary,
+        marginTop: theme.spacing.xxl,
+        lineHeight: 22,
     },
 });

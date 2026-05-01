@@ -1,7 +1,3 @@
-"""
-Recipe generator using OpenAI ChatGPT API.
-Generates a structured recipe based on dish name and available ingredients.
-"""
 import json
 from openai import AsyncOpenAI
 from db import get_settings
@@ -12,10 +8,6 @@ client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 
 async def generate_recipe_text(dish_title: str, ingredients: list[str]) -> GeneratedRecipe:
-    """
-    Generate a recipe using ChatGPT.
-    Returns structured recipe with steps, time, and servings.
-    """
     prompt = f"""Ты — профессиональный повар. Сгенерируй подробный рецепт блюда.
 
 Блюдо: {dish_title}
@@ -44,7 +36,6 @@ async def generate_recipe_text(dish_title: str, ingredients: list[str]) -> Gener
 
     content = response.choices[0].message.content.strip()
 
-    # Clean markdown wrapping if present
     if content.startswith("```"):
         content = content.split("\n", 1)[1]
         content = content.rsplit("```", 1)[0]

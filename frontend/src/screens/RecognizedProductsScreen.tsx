@@ -3,19 +3,16 @@ import { View, Text, StyleSheet, FlatList, Alert, TouchableOpacity } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import { Button } from '../components/Button';
-import { api } from '../services/api';
+import { productsAPI, DetectedProduct } from '../services/api';
 import { Loader } from '../components/Loader';
 
-// Types for products
-interface Product {
-    id: string;
-    name: string;
-    confidence: number;
+interface ProductItem extends DetectedProduct {
+    key: string;
 }
 
 export default function RecognizedProductsScreen({ navigation, route }: any) {
     const { imageUri } = route.params;
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<ProductItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -24,33 +21,37 @@ export default function RecognizedProductsScreen({ navigation, route }: any) {
 
     const fetchProducts = async () => {
         try {
-            const detected = await api.detectProducts(imageUri);
-            setProducts(detected);
-        } catch (error) {
-            Alert.alert('Ошибка', 'Не удалось загрузить список продуктов');
+            const detected = await productsAPI.detect(imageUri);
+            const items: ProductItem[] = detected.map((p, i) => ({ ...p, key: `${p.name}-${i}` }));
+            setProducts(items);
+        } catch (error: any) {
+            const message = error?.response?.data?.detail || 'Не удалось распознать продукты. Проверь, что бэкенд запущен.';
+            Alert.alert('Ошибка', message);
         } finally {
             setLoading(false);
         }
     };
 
-    const removeProduct = (id: string) => {
-        setProducts(products.filter(p => p.id !== id));
+    const removeProduct = (key: string) => {
+        setProducts(products.filter(p => p.key !== key));
     };
 
-    const handleGenerateRecipes = async () => {
+    const handleGenerateRecipes = () => {
         if (products.length === 0) {
             Alert.alert('Внимание', 'Список продуктов пуст');
             return;
         }
-        // We navigate to RecipeList and pass the product names
         const productNames = products.map(p => p.name);
         navigation.navigate('RecipeList', { products: productNames });
     };
 
-    const renderItem = ({ item }: { item: Product }) => (
+    const renderItem = ({ item }: { item: ProductItem }) => (
         <View style={styles.item}>
-            <Text style={styles.itemText}>{item.name}</Text>
-            <TouchableOpacity onPress={() => removeProduct(item.id)}>
+            <View style={styles.itemRow}>
+                <Text style={styles.itemText}>{item.name}</Text>
+                <Text style={styles.itemConfidence}>{Math.round(item.confidence * 100)}%</Text>
+            </View>
+            <TouchableOpacity onPress={() => removeProduct(item.key)} hitSlop={8}>
                 <Text style={styles.removeText}>✕</Text>
             </TouchableOpacity>
         </View>
@@ -62,12 +63,14 @@ export default function RecognizedProductsScreen({ navigation, route }: any) {
 
             <View style={styles.header}>
                 <Text style={styles.title}>Продукты</Text>
-                <Text style={styles.subtitle}>Проверь список распознанных продуктов</Text>
+                <Text style={styles.subtitle}>
+                    {loading ? 'Распознаём...' : `Найдено: ${products.length}. Убери лишнее, если есть.`}
+                </Text>
             </View>
 
             <FlatList
                 data={products}
-                keyExtractor={item => item.id}
+                keyExtractor={item => item.key}
                 renderItem={renderItem}
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
@@ -79,7 +82,7 @@ export default function RecognizedProductsScreen({ navigation, route }: any) {
                 <Button
                     title="Сформировать рецепты"
                     onPress={handleGenerateRecipes}
-                    disabled={products.length === 0}
+                    disabled={products.length === 0 || loading}
                 />
             </View>
         </SafeAreaView>
@@ -100,6 +103,7 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         ...theme.typography.body,
+        color: theme.colors.textSecondary,
     },
     list: {
         padding: theme.spacing.l,
@@ -113,9 +117,21 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    itemRow: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.m,
+    },
     itemText: {
         ...theme.typography.h3,
         color: theme.colors.text,
+        textTransform: 'capitalize',
+    },
+    itemConfidence: {
+        ...theme.typography.caption,
+        fontSize: 12,
+        color: theme.colors.textSecondary,
     },
     removeText: {
         color: theme.colors.error,

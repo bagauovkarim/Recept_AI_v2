@@ -36,8 +36,8 @@ export default function ProfileScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.name}>{user?.name?.toUpperCase() || 'ПОЛЬЗОВАТЕЛЬ'}</Text>
-                <Text style={styles.email}>{user?.email?.toUpperCase() || 'EMAIL@EXAMPLE.COM'}</Text>
+                <Text style={styles.name}>ПОЛЬЗОВАТЕЛЬ</Text>
+                <Text style={styles.email}>{user?.email?.toUpperCase() || ''}</Text>
             </View>
 
             <ScrollView style={styles.content}>

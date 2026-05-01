@@ -23,7 +23,6 @@ export const Button: React.FC<ButtonProps> = ({
     textStyle,
     icon,
 }) => {
-    // Use standard Animated API
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const handlePressIn = () => {
@@ -73,7 +72,7 @@ export const Button: React.FC<ButtonProps> = ({
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             disabled={disabled || loading}
-            style={[style]} // Pass external style to Pressable wrapper
+            style={[style]}
         >
             <Animated.View
                 style={[
@@ -104,7 +103,7 @@ const styles = StyleSheet.create({
     button: {
         paddingVertical: theme.spacing.m + 4,
         paddingHorizontal: theme.spacing.l,
-        borderRadius: 0, // Rectangular
+        borderRadius: 0,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
