@@ -32,12 +32,32 @@ git clone https://github.com/bagauovkarim/Recept_AI_v2.git
 cd Recept_AI_v2
 ```
 
-## 2. Скачать веса YOLO (best.pt 19 МБ — лежит в GitHub Release)
+## 2. Положить веса YOLO (best.pt, ~19 МБ)
+
+Файл `best.pt` не в git (gitignored как `*.pt`). Перенеси с Windows на Mac
+любым способом:
+
+- **iCloud Drive** — перетащи файл в папку iCloud на Windows, на Mac он
+  автоматически появится
+- **AirDrop посредством iPhone** — отправь с Windows на iPhone (через
+  «Send Anywhere» или подобное приложение), затем AirDrop с iPhone на Mac
+- **USB-флешка** — копируй прямой
+- **GitHub Release** (если хочешь запостить навсегда):
+  ```bash
+  brew install gh
+  gh auth login
+  cd Recept_AI_v2
+  gh release create v0.1.0 \
+    /path/to/best.pt \
+    --title "v0.1.0 — trained YOLO11s weights" \
+    --notes "Trained on Roboflow Fridgify v4 (300 epochs, mAP50-95 = 0.886)"
+  ```
+
+Затем положи файл в нужное место:
 
 ```bash
 mkdir -p ml_model/models/fridgify_y11s_full/weights
-curl -L -o ml_model/models/fridgify_y11s_full/weights/best.pt \
-  https://github.com/bagauovkarim/Recept_AI_v2/releases/download/v0.1.0/best.pt
+mv ~/Downloads/best.pt ml_model/models/fridgify_y11s_full/weights/best.pt
 
 # Проверка размера (должно быть ~19 МБ)
 ls -lh ml_model/models/fridgify_y11s_full/weights/best.pt
