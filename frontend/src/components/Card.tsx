@@ -5,10 +5,9 @@ import { theme } from '../theme';
 interface CardProps {
     children: React.ReactNode;
     style?: ViewStyle;
-    variant?: 'default' | 'elevated';
 }
 
-export const Card: React.FC<CardProps> = ({ children, style, variant = 'default' }) => {
+export const Card: React.FC<CardProps> = ({ children, style }) => {
     return (
         <View style={[styles.card, style]}>
             {children}

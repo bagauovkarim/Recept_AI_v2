@@ -1,5 +1,3 @@
-"""Audit fridgify_v4 dataset: class distribution, label validity, image stats."""
-
 from __future__ import annotations
 
 import sys

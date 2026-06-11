@@ -1,0 +1,18 @@
+[run]
+branch = False
+source = .
+omit =
+    venv/*
+    tests/*
+    seed_dishes.py
+    check_setup.py
+    config-*.py
+    /private/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError
+show_missing = False
+skip_covered = False

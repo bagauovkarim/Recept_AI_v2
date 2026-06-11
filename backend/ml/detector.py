@@ -1,5 +1,5 @@
 from ultralytics import YOLO
-from PIL import Image
+from PIL import Image, ImageOps
 from db import get_settings
 from schemas import DetectedProduct
 
@@ -16,8 +16,15 @@ def _get_model() -> YOLO:
 
 
 def detect_products(image: Image.Image) -> list[DetectedProduct]:
+    image = ImageOps.exif_transpose(image)
+    if image.mode != "RGB":
+        image = image.convert("RGB")
     model = _get_model()
-    results = model.predict(source=image, conf=settings.CONFIDENCE_THRESHOLD, verbose=False)
+    results = model.predict(
+        source=image,
+        conf=settings.CONFIDENCE_THRESHOLD,
+        verbose=False,
+    )
 
     products = []
     seen = set()

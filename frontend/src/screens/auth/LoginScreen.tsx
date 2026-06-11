@@ -1,25 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../theme';
 import { Button } from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
+import { useI18n } from '../../i18n';
+import { useToast } from '../../components/Toast';
 
 export default function LoginScreen({ navigation }: any) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
+    const { t } = useI18n();
+    const toast = useToast();
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Ошибка', 'Введите email и пароль');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            toast.show(t('auth.errEmptyFields'), 'error');
             return;
         }
         setLoading(true);
         try {
             await login(email, password);
-        } catch {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (error: any) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const detail = error?.response?.data?.detail;
+            toast.show(detail || t('auth.errLogin'), 'error');
         } finally {
             setLoading(false);
         }
@@ -32,15 +42,15 @@ export default function LoginScreen({ navigation }: any) {
                 style={styles.content}
             >
                 <View style={styles.header}>
-                    <Text style={styles.logo}>🍳 ReceptAI</Text>
-                    <Text style={styles.title}>Добро пожаловать!</Text>
-                    <Text style={styles.subtitle}>Войдите, чтобы продолжить</Text>
+                    <Text style={styles.logo}>🍳 {t('auth.appName')}</Text>
+                    <Text style={styles.title}>{t('auth.welcome')}</Text>
+                    <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
                 </View>
 
                 <View style={styles.form}>
                     <TextInput
                         style={styles.input}
-                        placeholder="Email"
+                        placeholder={t('auth.email')}
                         placeholderTextColor={theme.colors.textSecondary}
                         value={email}
                         onChangeText={setEmail}
@@ -49,7 +59,7 @@ export default function LoginScreen({ navigation }: any) {
                     />
                     <TextInput
                         style={styles.input}
-                        placeholder="Пароль"
+                        placeholder={t('auth.password')}
                         placeholderTextColor={theme.colors.textSecondary}
                         value={password}
                         onChangeText={setPassword}
@@ -57,16 +67,16 @@ export default function LoginScreen({ navigation }: any) {
                     />
 
                     <Button
-                        title="Войти"
+                        title={t('auth.login')}
                         onPress={handleLogin}
                         loading={loading}
                         style={styles.button}
                     />
 
                     <Button
-                        title="Нет аккаунта? Регистрация"
+                        title={t('auth.noAccount')}
                         onPress={() => navigation.navigate('Register')}
-                        variant="outline"
+                        variant="ghost"
                         style={styles.linkButton}
                     />
                 </View>
@@ -117,6 +127,5 @@ const styles = StyleSheet.create({
     },
     linkButton: {
         marginTop: theme.spacing.s,
-        borderWidth: 0,
     },
 });

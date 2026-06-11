@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../../theme';
 import { Button } from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
+import { useI18n } from '../../i18n';
+import { useToast } from '../../components/Toast';
 
 export default function RegisterScreen({ navigation }: any) {
     const [email, setEmail] = useState('');
@@ -11,24 +14,33 @@ export default function RegisterScreen({ navigation }: any) {
     const [confirmPassword, setConfirmPassword] = useState('');
     const { register } = useAuth();
     const [loading, setLoading] = useState(false);
+    const { t } = useI18n();
+    const toast = useToast();
 
     const handleRegister = async () => {
         if (!email || !password || !confirmPassword) {
-            Alert.alert('Ошибка', 'Заполните все поля');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            toast.show(t('auth.errAllFields'), 'error');
             return;
         }
         if (password.length < 6) {
-            Alert.alert('Ошибка', 'Пароль должен быть не менее 6 символов');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            toast.show(t('auth.errPasswordShort'), 'error');
             return;
         }
         if (password !== confirmPassword) {
-            Alert.alert('Ошибка', 'Пароли не совпадают');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            toast.show(t('auth.errPasswordsMismatch'), 'error');
             return;
         }
         setLoading(true);
         try {
             await register(email, password);
-        } catch {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (error: any) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const detail = error?.response?.data?.detail;
+            toast.show(detail || t('auth.errRegister'), 'error');
         } finally {
             setLoading(false);
         }
@@ -41,14 +53,14 @@ export default function RegisterScreen({ navigation }: any) {
                 style={styles.content}
             >
                 <View style={styles.header}>
-                    <Text style={styles.title}>Создать аккаунт</Text>
-                    <Text style={styles.subtitle}>Присоединяйтесь к ReceptAI</Text>
+                    <Text style={styles.title}>{t('auth.registerTitle')}</Text>
+                    <Text style={styles.subtitle}>{t('auth.registerSubtitle')}</Text>
                 </View>
 
                 <View style={styles.form}>
                     <TextInput
                         style={styles.input}
-                        placeholder="Email"
+                        placeholder={t('auth.email')}
                         placeholderTextColor={theme.colors.textSecondary}
                         value={email}
                         onChangeText={setEmail}
@@ -57,7 +69,7 @@ export default function RegisterScreen({ navigation }: any) {
                     />
                     <TextInput
                         style={styles.input}
-                        placeholder="Пароль"
+                        placeholder={t('auth.password')}
                         placeholderTextColor={theme.colors.textSecondary}
                         value={password}
                         onChangeText={setPassword}
@@ -65,7 +77,7 @@ export default function RegisterScreen({ navigation }: any) {
                     />
                     <TextInput
                         style={styles.input}
-                        placeholder="Подтвердите пароль"
+                        placeholder={t('auth.confirmPassword')}
                         placeholderTextColor={theme.colors.textSecondary}
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
@@ -73,16 +85,16 @@ export default function RegisterScreen({ navigation }: any) {
                     />
 
                     <Button
-                        title="Зарегистрироваться"
+                        title={t('auth.register')}
                         onPress={handleRegister}
                         loading={loading}
                         style={styles.button}
                     />
 
                     <Button
-                        title="Уже есть аккаунт? Войти"
+                        title={t('auth.hasAccount')}
                         onPress={() => navigation.goBack()}
-                        variant="outline"
+                        variant="ghost"
                         style={styles.linkButton}
                     />
                 </View>
@@ -129,6 +141,5 @@ const styles = StyleSheet.create({
     },
     linkButton: {
         marginTop: theme.spacing.s,
-        borderWidth: 0,
     },
 });

@@ -1,7 +1,6 @@
-"""Run model.val() on the OOD smart-fridge eval set and write a comparison report."""
-
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -11,9 +10,9 @@ from ultralytics import YOLO
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-WEIGHTS = REPO_ROOT / "ml_model" / "models" / "fridgify_y11s_full" / "weights" / "best.pt"
-DATA_YAML = Path("D:/eval_smart_fridge/mapped/data.yaml")
-OUT_DIR = REPO_ROOT / "ml_model" / "models" / "fridgify_y11s_full" / "ood_eval"
+DEFAULT_WEIGHTS = REPO_ROOT / "ml_model" / "models" / "fridgify_y11s_full" / "weights" / "best.pt"
+DEFAULT_DATA = REPO_ROOT / "ml_model" / "eval_data" / "data.yaml"
+DEFAULT_OUT = REPO_ROOT / "ml_model" / "models" / "fridgify_y11s_full" / "ood_eval"
 
 
 def pick_device() -> str | int:
@@ -24,32 +23,49 @@ def pick_device() -> str | int:
     return "cpu"
 
 
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="OOD evaluation on smart-fridge dataset.")
+    p.add_argument("--weights", type=Path, default=DEFAULT_WEIGHTS)
+    p.add_argument("--data", type=Path, default=DEFAULT_DATA,
+                   help="Path to OOD data.yaml")
+    p.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--batch", type=int, default=8)
+    p.add_argument("--split", default="val")
+    return p
+
+
 def main() -> int:
-    if not WEIGHTS.exists():
-        print(f"ERROR: weights missing: {WEIGHTS}", file=sys.stderr)
+    args = build_parser().parse_args()
+    weights = args.weights.expanduser().resolve()
+    data_yaml = args.data.expanduser().resolve()
+    out_dir = args.out.expanduser().resolve()
+
+    if not weights.exists():
+        print(f"ERROR: weights missing: {weights}", file=sys.stderr)
         return 2
-    if not DATA_YAML.exists():
-        print(f"ERROR: data.yaml missing: {DATA_YAML}", file=sys.stderr)
+    if not data_yaml.exists():
+        print(f"ERROR: data.yaml missing: {data_yaml}", file=sys.stderr)
         return 2
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Weights: {WEIGHTS}")
-    print(f"Data:    {DATA_YAML}")
-    print(f"Out:     {OUT_DIR}\n")
+    print(f"Weights: {weights}")
+    print(f"Data:    {data_yaml}")
+    print(f"Out:     {out_dir}\n")
 
-    model = YOLO(str(WEIGHTS))
+    model = YOLO(str(weights))
     metrics = model.val(
-        data=str(DATA_YAML),
-        split="val",
-        imgsz=640,
-        batch=8,
+        data=str(data_yaml),
+        split=args.split,
+        imgsz=args.imgsz,
+        batch=args.batch,
         device=pick_device(),
         workers=0,
         plots=True,
         save_json=False,
-        project=str(OUT_DIR.parent),
-        name=OUT_DIR.name,
+        project=str(out_dir.parent),
+        name=out_dir.name,
         exist_ok=True,
         verbose=True,
     )
@@ -81,7 +97,7 @@ def main() -> int:
                 "mAP50-95": float(ap[i].mean() if hasattr(ap[i], "mean") else ap[i]) if len(ap) > i else None,
             }
 
-    out_json = OUT_DIR / "ood_metrics.json"
+    out_json = out_dir / "ood_metrics.json"
     out_json.write_text(json.dumps({"summary": summary, "per_class": per_class}, indent=2), encoding="utf-8")
     print(f"\nSaved: {out_json}")
     return 0

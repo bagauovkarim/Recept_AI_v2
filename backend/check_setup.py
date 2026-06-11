@@ -1,4 +1,3 @@
-"""Sanity-check that all backend modules import cleanly and settings resolve."""
 from __future__ import annotations
 
 from dotenv import load_dotenv
@@ -40,4 +39,6 @@ print(f"  CONFIDENCE_THRESHOLD: {s.CONFIDENCE_THRESHOLD}")
 print(f"  ALGORITHM:            {s.ALGORITHM}")
 print(f"  ACCESS_TOKEN_EXPIRE_MINUTES: {s.ACCESS_TOKEN_EXPIRE_MINUTES}")
 print(f"  DATABASE_URL:         {s.DATABASE_URL.split('@')[-1] if '@' in s.DATABASE_URL else s.DATABASE_URL}")
-print(f"  OPENAI_API_KEY set:   {bool(s.OPENAI_API_KEY) and s.OPENAI_API_KEY != 'your_openai_api_key_here'}")
+print(f"  DEEPSEEK_API_KEY set: {bool(s.DEEPSEEK_API_KEY) and s.DEEPSEEK_API_KEY != 'your_deepseek_api_key_here'}")
+print(f"  DEEPSEEK_BASE_URL:    {s.DEEPSEEK_BASE_URL}")
+print(f"  DEEPSEEK_MODEL:       {s.DEEPSEEK_MODEL}")

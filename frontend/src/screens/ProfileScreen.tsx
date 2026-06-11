@@ -1,71 +1,94 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { Button } from '../components/Button';
 import { useAuth } from '../context/AuthContext';
+import { useI18n, Lang } from '../i18n';
 
 export default function ProfileScreen() {
     const { user, logout } = useAuth();
-    const [notifications, setNotifications] = useState(true);
+    const { t, lang, setLang } = useI18n();
+    const nav = useNavigation<any>();
 
     const handleLogout = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         Alert.alert(
-            'ВЫХОД',
-            'ВЫЙТИ ИЗ АККАУНТА?',
+            t('profile.logoutTitle'),
+            t('profile.logoutMsg'),
             [
-                { text: 'ОТМЕНА', style: 'cancel' },
-                { text: 'ВЫЙТИ', style: 'destructive', onPress: logout },
+                { text: t('profile.logoutCancel'), style: 'cancel' },
+                { text: t('profile.logoutConfirm'), style: 'destructive', onPress: logout },
             ]
         );
     };
 
-    const renderSettingItem = (label: string, value: boolean, onValueChange: (val: boolean) => void) => (
-        <View style={styles.settingItem}>
-            <Text style={styles.settingLabel}>{label}</Text>
-            <Switch
-                value={value}
-                onValueChange={onValueChange}
-                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                thumbColor={value ? '#000' : '#fff'}
-                ios_backgroundColor={theme.colors.border}
-            />
-        </View>
-    );
+    const onToggleLang = async (l: Lang) => {
+        if (l !== lang) {
+            Haptics.selectionAsync();
+            await setLang(l);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.name}>ПОЛЬЗОВАТЕЛЬ</Text>
-                <Text style={styles.email}>{user?.email?.toUpperCase() || ''}</Text>
+                <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{user?.email?.[0]?.toUpperCase() || '?'}</Text>
+                </View>
+                <Text style={styles.name}>{t('profile.title')}</Text>
+                <Text style={styles.email}>{user?.email || ''}</Text>
             </View>
 
             <ScrollView style={styles.content}>
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>НАСТРОЙКИ</Text>
-                    {renderSettingItem('УВЕДОМЛЕНИЯ', notifications, setNotifications)}
+                    <Text style={styles.sectionTitle}>{t('profile.sectionLanguage')}</Text>
+                    <View style={styles.segmented}>
+                        <TouchableOpacity
+                            style={[styles.segment, lang === 'ru' && styles.segmentActive]}
+                            onPress={() => onToggleLang('ru')}
+                        >
+                            <Text style={[styles.segmentText, lang === 'ru' && styles.segmentTextActive]}>
+                                {t('profile.langRu')}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.segment, lang === 'en' && styles.segmentActive]}
+                            onPress={() => onToggleLang('en')}
+                        >
+                            <Text style={[styles.segmentText, lang === 'en' && styles.segmentTextActive]}>
+                                {t('profile.langEn')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>АККАУНТ</Text>
-                    <TouchableOpacity style={styles.menuItem}>
-                        <Text style={styles.menuItemText}>ИЗМЕНИТЬ ПРОФИЛЬ</Text>
-                        <Text style={styles.chevron}>→</Text>
+                    <Text style={styles.sectionTitle}>{t('profile.sectionAccount')}</Text>
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => { Haptics.selectionAsync(); nav.navigate('EditProfile'); }}
+                    >
+                        <Ionicons name="person-circle-outline" size={22} color={theme.colors.text} />
+                        <Text style={styles.menuItemText}>{t('profile.editProfile')}</Text>
+                        <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.menuItem}>
-                        <Text style={styles.menuItemText}>ПОМОЩЬ</Text>
-                        <Text style={styles.chevron}>→</Text>
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => { Haptics.selectionAsync(); nav.navigate('Help'); }}
+                    >
+                        <Ionicons name="help-circle-outline" size={22} color={theme.colors.text} />
+                        <Text style={styles.menuItemText}>{t('profile.help')}</Text>
+                        <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.footer}>
-                    <Button
-                        title="ВЫЙТИ"
-                        onPress={handleLogout}
-                        variant="outline"
-                        style={styles.logoutButton}
-                    />
-                    <Text style={styles.version}>V 1.0.0</Text>
+                    <Button title={t('profile.logout')} onPress={handleLogout} variant="outline" style={styles.logoutButton} />
+                    <Text style={styles.version}>{t('profile.version')}</Text>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -73,94 +96,80 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
+    container: { flex: 1, backgroundColor: theme.colors.background },
     header: {
         alignItems: 'center',
-        padding: theme.spacing.xl,
+        paddingTop: theme.spacing.l,
+        paddingBottom: theme.spacing.l,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
     },
     avatar: {
-        width: 100,
-        height: 100,
+        width: 72,
+        height: 72,
+        borderRadius: 36,
         backgroundColor: theme.colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: theme.spacing.m,
-        borderWidth: 2,
-        borderColor: theme.colors.primary,
     },
-    avatarText: {
-        fontSize: 48,
-        fontWeight: '900',
-        color: '#000',
-    },
-    name: {
-        ...theme.typography.h2,
-        marginBottom: theme.spacing.xs,
-    },
-    email: {
-        ...theme.typography.caption,
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-    },
-    content: {
-        flex: 1,
-    },
+    avatarText: { fontSize: 32, fontWeight: '900', color: theme.colors.onPrimary },
+    name: { ...theme.typography.h2, marginBottom: 4 },
+    email: { ...theme.typography.body, color: theme.colors.textSecondary, fontSize: 14 },
+    content: { flex: 1 },
     section: {
-        padding: theme.spacing.l,
+        paddingHorizontal: theme.spacing.l,
+        paddingVertical: theme.spacing.l,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
     },
     sectionTitle: {
-        ...theme.typography.h3,
-        fontSize: 20,
-        color: theme.colors.text,
-        marginBottom: theme.spacing.l,
-    },
-    settingItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        ...theme.typography.caption,
+        fontSize: 11,
         marginBottom: theme.spacing.m,
+        color: theme.colors.textSecondary,
     },
-    settingLabel: {
-        ...theme.typography.body,
-        fontSize: 18,
-        fontWeight: '600',
+    segmented: {
+        flexDirection: 'row',
+        gap: theme.spacing.s,
     },
+    segment: {
+        flex: 1,
+        paddingVertical: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.borderRadius.m,
+        backgroundColor: theme.colors.surface,
+    },
+    segmentActive: {
+        backgroundColor: theme.colors.primary,
+        borderColor: theme.colors.primary,
+    },
+    segmentText: { ...theme.typography.body, fontSize: 14, color: theme.colors.textSecondary, fontWeight: '700' },
+    segmentTextActive: { color: theme.colors.onPrimary },
     menuItem: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: theme.spacing.m,
-        borderBottomWidth: 1,
-        borderBottomColor: '#222',
+        gap: theme.spacing.m,
+        paddingVertical: 14,
     },
     menuItemText: {
         ...theme.typography.body,
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
-    },
-    chevron: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: theme.colors.primary,
+        flex: 1,
     },
     footer: {
-        padding: theme.spacing.xl,
+        padding: theme.spacing.l,
         alignItems: 'center',
     },
-    logoutButton: {
-        width: '100%',
-    },
+    logoutButton: { width: '100%' },
     version: {
         marginTop: theme.spacing.m,
         color: theme.colors.textSecondary,
         fontSize: 12,
-        fontWeight: 'bold',
     },
 });

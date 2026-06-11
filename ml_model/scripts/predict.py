@@ -1,5 +1,3 @@
-"""Run YOLO inference on a single image and print predictions."""
-
 from __future__ import annotations
 
 import sys
@@ -101,7 +99,7 @@ def main() -> int:
     print("=" * 64)
     print(f"Total objects: {sum(counts.values())}  Unique classes: {len(counts)}")
     print()
-    print(f"Annotated image saved to: {DEFAULT_OUT_DIR}\\{image_path.name}")
+    print(f"Annotated image saved to: {DEFAULT_OUT_DIR / image_path.name}")
     return 0
 
 

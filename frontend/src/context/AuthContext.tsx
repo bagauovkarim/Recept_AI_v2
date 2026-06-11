@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI } from '../services/api';
-import { Alert } from 'react-native';
+import { authAPI, onUnauthorized } from '../services/api';
+import { clearAllCachedRecipes } from '../services/recipeCache';
 
 interface User {
     id: number;
@@ -15,6 +15,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string) => Promise<void>;
     logout: () => void;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,41 +39,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         };
         restoreSession();
+
+        const unsubscribe = onUnauthorized(() => {
+            setUser(null);
+        });
+        return unsubscribe;
     }, []);
 
     const login = async (email: string, password: string) => {
-        try {
-            const data = await authAPI.login(email, password);
-            await AsyncStorage.setItem('token', data.access_token);
-            const userData = await authAPI.getMe();
-            setUser(userData);
-        } catch (error: any) {
-            const message = error.response?.data?.detail || 'Ошибка входа';
-            Alert.alert('Ошибка', message);
-            throw error;
-        }
+        const data = await authAPI.login(email, password);
+        await AsyncStorage.setItem('token', data.access_token);
+        const userData = await authAPI.getMe();
+        setUser(userData);
     };
 
     const register = async (email: string, password: string) => {
-        try {
-            const data = await authAPI.register(email, password);
-            await AsyncStorage.setItem('token', data.access_token);
-            const userData = await authAPI.getMe();
-            setUser(userData);
-        } catch (error: any) {
-            const message = error.response?.data?.detail || 'Ошибка регистрации';
-            Alert.alert('Ошибка', message);
-            throw error;
-        }
+        const data = await authAPI.register(email, password);
+        await AsyncStorage.setItem('token', data.access_token);
+        const userData = await authAPI.getMe();
+        setUser(userData);
     };
 
     const logout = async () => {
         await AsyncStorage.removeItem('token');
+        await clearAllCachedRecipes();
         setUser(null);
     };
 
+    const refreshUser = async () => {
+        const userData = await authAPI.getMe();
+        setUser(userData);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, logout, register }}>
+        <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, logout, register, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

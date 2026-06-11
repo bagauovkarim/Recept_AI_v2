@@ -7,7 +7,7 @@ class Dish(Base):
     __tablename__ = "dishes"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=False, unique=True)
     ingredients = Column(JSONB, nullable=False)
     difficulty = Column(
         String,

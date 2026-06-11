@@ -1,0 +1,134 @@
+# создать пользователя postgres
+psql postgres -c "CREATE USER receptai_user WITH PASSWORD 'receptai_pass';"
+
+# создать базу
+psql postgres -c "CREATE DATABASE receptai_db OWNER receptai_user;"
+
+# перейти в backend
+cd backend
+
+# создать venv
+python3.11 -m venv venv
+
+# активировать venv (mac)
+source venv/bin/activate
+
+# активировать venv (windows)
+.\venv\Scripts\activate
+
+# поставить зависимости
+pip install -r requirements.txt
+
+# скопировать конфиг
+cp .env.example .env
+
+# проверить окружение
+python check_setup.py
+
+# залить блюда в базу
+python seed_dishes.py
+
+# запустить api
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# прогнать тесты
+pytest
+
+# прогнать тесты с покрытием в консоль
+pytest --cov=. --cov-report=term-missing
+
+# прогнать тесты с html отчётом
+pytest --cov=. --cov-report=html
+
+# открыть html отчёт покрытия
+open htmlcov/index.html
+
+# один файл тестов
+pytest tests/test_recipe_generator.py
+
+# один тест по имени
+pytest tests/test_products.py::test_detect_returns_products -v
+
+# перейти во frontend
+cd frontend
+
+# поставить npm зависимости
+npm install
+
+# узнать ip mac в локальной сети
+ipconfig getifaddr en0
+
+# запустить expo с адресом backend
+EXPO_PUBLIC_API_URL=http://192.168.1.162:8000 npx expo start
+
+# запустить expo со сбросом кеша
+npx expo start -c
+
+# обучить yolo
+python ml_model/scripts/train_yolo11s_full.py
+
+# инференс на одной картинке
+python ml_model/scripts/predict.py --image path/to/photo.jpg
+
+# ood оценка
+python ml_model/scripts/eval_ood.py
+
+# аудит датасета
+python ml_model/scripts/audit_dataset.py
+
+# статус репозитория
+git status
+
+# диф изменений
+git diff
+
+# последние коммиты
+git log --oneline -20
+
+# добавить файл
+git add <file>
+
+# коммит
+git commit -m "feat: ..."
+
+# пуш
+git push
+
+# удалить .DS_Store
+find . -name ".DS_Store" -delete
+
+# удалить python кеш
+find . -name "__pycache__" -type d -exec rm -rf {} +
+
+# удалить .pyc
+find . -name "*.pyc" -delete
+
+# удалить pytest и coverage кеш
+rm -rf backend/.pytest_cache backend/.coverage backend/htmlcov
+
+# проверить что postgres запущен
+pg_isready
+
+# проверить что backend поднят
+curl http://localhost:8000/health
+
+# зарегистрировать тестового пользователя
+curl -X POST http://localhost:8000/auth/register -H "Content-Type: application/json" -d '{"email":"t@t.t","password":"secret123"}'
+
+
+
+
+# смена сети — узнать новый ip mac
+ipconfig getifaddr en0
+
+# смена сети — записать новый ip в .env фронта
+echo "EXPO_PUBLIC_API_URL=http://172.20.10.2:8000" > frontend/.env
+
+# смена сети — убить старый expo
+lsof -ti:8081 | xargs kill -9
+
+# смена сети — запустить expo с явным ip
+cd frontend && REACT_NATIVE_PACKAGER_HOSTNAME=172.20.10.2 npx expo start --lan --clear
+
+# смена сети — открыть проект на iphone через safari
+# https://expo.dev/--/to-exp/exp%3A%2F%2F172.20.10.2%3A8081

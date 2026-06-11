@@ -9,12 +9,15 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
-    OPENAI_API_KEY: str = ""
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    DEEPSEEK_MODEL: str = "deepseek-chat"
     YOLO_MODEL_PATH: str = "../ml_model/models/best.pt"
     CONFIDENCE_THRESHOLD: float = 0.5
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 @lru_cache()

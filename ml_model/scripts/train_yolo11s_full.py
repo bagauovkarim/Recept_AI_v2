@@ -1,9 +1,3 @@
-"""Full training pipeline for YOLOv11s on Fridgify dataset.
-
-Cross-platform: auto-selects CUDA / MPS / CPU.
-Optimized for RTX 2070 SUPER 8GB VRAM.
-"""
-
 from __future__ import annotations
 
 import argparse

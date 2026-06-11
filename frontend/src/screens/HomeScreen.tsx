@@ -1,28 +1,49 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../theme';
 import { Button } from '../components/Button';
+import { useI18n } from '../i18n';
+import { useToast } from '../components/Toast';
 
 export default function HomeScreen({ navigation }: any) {
     const [image, setImage] = useState<string | null>(null);
+    const [aspectRatio, setAspectRatio] = useState<number>(3 / 4);
+    const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+    const { t } = useI18n();
+    const toast = useToast();
+
+    useEffect(() => {
+        if (!image) return;
+        Image.getSize(
+            image,
+            (w, h) => setAspectRatio(w / h),
+            () => setAspectRatio(3 / 4),
+        );
+    }, [image]);
+
+    const onContentLayout = (e: LayoutChangeEvent) => {
+        const { width, height } = e.nativeEvent.layout;
+        setBox({ w: width, h: height });
+    };
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('ОШИБКА', 'НУЖЕН ДОСТУП К ГАЛЕРЕЕ');
+            toast.show(t('home.permGallery'), 'error');
             return;
         }
 
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
+            mediaTypes: ['images'],
+            allowsEditing: false,
+            quality: 0.85,
         });
 
         if (!result.canceled) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setImage(result.assets[0].uri);
         }
     };
@@ -30,60 +51,97 @@ export default function HomeScreen({ navigation }: any) {
     const takePhoto = async () => {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('ОШИБКА', 'НУЖЕН ДОСТУП К КАМЕРЕ');
+            toast.show(t('home.permCamera'), 'error');
             return;
         }
 
         let result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
+            allowsEditing: false,
+            quality: 0.85,
         });
 
         if (!result.canceled) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setImage(result.assets[0].uri);
         }
     };
 
     const handleRecognize = () => {
         if (!image) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         navigation.navigate('RecognizedProducts', { imageUri: image });
     };
+
+    let previewW = 0;
+    let previewH = 0;
+    if (box && image) {
+        const padding = theme.spacing.l * 2;
+        const maxW = box.w - padding;
+        const maxH = box.h - padding;
+        if (aspectRatio >= maxW / maxH) {
+            previewW = maxW;
+            previewH = maxW / aspectRatio;
+        } else {
+            previewH = maxH;
+            previewW = maxH * aspectRatio;
+        }
+    }
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>RECEPTAI</Text>
-                <Text style={styles.subtitle}>ТВОЙ ШЕФ-ПОВАР</Text>
+                <Text style={styles.title}>{t('home.title')}</Text>
+                <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
             </View>
 
-            <View style={styles.content}>
-                {image ? (
-                    <View style={styles.previewContainer}>
-                        <Image source={{ uri: image }} style={styles.preview} />
-                        <Button
-                            title="УДАЛИТЬ"
-                            onPress={() => setImage(null)}
-                            variant="secondary"
-                            style={styles.removeButton}
-                        />
-                    </View>
-                ) : (
-                    <View style={styles.placeholder}>
-                        <Text style={styles.placeholderText}>📷</Text>
-                        <Text style={styles.placeholderDesc}>СДЕЛАЙ ФОТО ПРОДУКТОВ</Text>
-                    </View>
-                )}
+            <View style={styles.content} onLayout={onContentLayout}>
+                {image && box ? (
+                    <Image
+                        source={{ uri: image }}
+                        style={{
+                            width: previewW,
+                            height: previewH,
+                            borderWidth: 2,
+                            borderColor: theme.colors.primary,
+                        }}
+                        resizeMode="cover"
+                    />
+                ) : !image && box ? (
+                    (() => {
+                        const padding = theme.spacing.l * 2;
+                        const maxW = box.w - padding;
+                        const maxH = box.h - padding;
+                        const ph = 3 / 4;
+                        let w: number;
+                        let h: number;
+                        if (ph >= maxW / maxH) {
+                            w = maxW;
+                            h = maxW / ph;
+                        } else {
+                            h = maxH;
+                            w = maxH * ph;
+                        }
+                        return (
+                            <View style={[styles.placeholder, { width: w, height: h }]}>
+                                <Text style={styles.placeholderText}>📷</Text>
+                                <Text style={styles.placeholderDesc}>{t('home.placeholder')}</Text>
+                            </View>
+                        );
+                    })()
+                ) : null}
             </View>
 
             <View style={styles.footer}>
                 {!image ? (
                     <>
-                        <Button title="СДЕЛАТЬ ФОТО" onPress={takePhoto} style={styles.button} />
-                        <Button title="ВЫБРАТЬ ИЗ ГАЛЕРЕИ" onPress={pickImage} variant="secondary" style={styles.button} />
+                        <Button title={t('home.takePhoto')} onPress={takePhoto} style={styles.button} />
+                        <Button title={t('home.pickGallery')} onPress={pickImage} variant="secondary" style={styles.button} />
                     </>
                 ) : (
-                    <Button title="РАСПОЗНАТЬ" onPress={handleRecognize} style={styles.button} />
+                    <>
+                        <Button title={t('home.recognize')} onPress={handleRecognize} style={styles.button} />
+                        <Button title={t('home.deletePhoto')} onPress={() => { Haptics.selectionAsync(); setImage(null); }} variant="secondary" style={styles.button} />
+                    </>
                 )}
             </View>
         </SafeAreaView>
@@ -96,50 +154,29 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.background,
     },
     header: {
-        padding: theme.spacing.xl,
+        paddingHorizontal: theme.spacing.l,
+        paddingVertical: theme.spacing.m,
         alignItems: 'center',
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
     },
     title: {
         ...theme.typography.h1,
-        fontSize: 42,
+        fontSize: 28,
         letterSpacing: 2,
-        marginBottom: theme.spacing.s,
+        marginBottom: 2,
     },
     subtitle: {
         ...theme.typography.caption,
-        fontSize: 14,
+        fontSize: 11,
         letterSpacing: 3,
     },
     content: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: theme.spacing.l,
-    },
-    previewContainer: {
-        width: '100%',
-        height: '80%',
-        borderWidth: 2,
-        borderColor: theme.colors.primary,
-        position: 'relative',
-    },
-    preview: {
-        width: '100%',
-        height: '100%',
-    },
-    removeButton: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        borderTopWidth: 2,
-        borderColor: theme.colors.background,
     },
     placeholder: {
-        width: '100%',
-        height: '80%',
         backgroundColor: theme.colors.surface,
         justifyContent: 'center',
         alignItems: 'center',

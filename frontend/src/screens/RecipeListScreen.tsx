@@ -1,26 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { theme } from '../theme';
 import { dishesAPI, DishOut } from '../services/api';
 import { Card } from '../components/Card';
 import { SkeletonLoader } from '../components/SkeletonLoader';
-
-const DIFFICULTY_LABEL: Record<DishOut['difficulty'], string> = {
-    easy: 'ЛЕГКО',
-    medium: 'СРЕДНЕ',
-    hard: 'СЛОЖНО',
-};
+import { AnimatedListItem } from '../components/AnimatedListItem';
+import { useI18n } from '../i18n';
+import { dishImage } from '../i18n/dishes';
+import { useToast } from '../components/Toast';
 
 export default function RecipeListScreen({ navigation, route }: any) {
-    const { products } = route.params as { products: string[] };
+    const { products, imageUri } = route.params as { products: string[]; imageUri?: string };
+    const [generatingFreeform, setGeneratingFreeform] = useState(false);
     const [dishes, setDishes] = useState<DishOut[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterDifficulty, setFilterDifficulty] = useState<DishOut['difficulty'] | null>(null);
+    const { t, tProduct, tDish, lang } = useI18n();
+    const toast = useToast();
 
     useEffect(() => {
         fetchDishes();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchDishes = async () => {
@@ -28,8 +31,9 @@ export default function RecipeListScreen({ navigation, route }: any) {
             const result = await dishesAPI.find(products);
             setDishes(result);
         } catch (error: any) {
-            const message = error?.response?.data?.detail || 'Не удалось найти рецепты';
-            Alert.alert('Ошибка', message);
+            const message = error?.response?.data?.detail || t('recipes.errFetch');
+            toast.show(message, 'error');
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         } finally {
             setLoading(false);
         }
@@ -39,36 +43,46 @@ export default function RecipeListScreen({ navigation, route }: any) {
         let result = dishes;
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
-            result = result.filter(d => d.title.toLowerCase().includes(q));
+            result = result.filter(d => tDish(d.title).toLowerCase().includes(q) || d.title.toLowerCase().includes(q));
         }
         if (filterDifficulty) {
             result = result.filter(d => d.difficulty === filterDifficulty);
         }
         return result;
-    }, [dishes, searchQuery, filterDifficulty]);
+    }, [dishes, searchQuery, filterDifficulty, tDish]);
 
-    const renderRecipe = ({ item }: { item: DishOut }) => (
-        <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('RecipeDetail', {
-                dish: item,
-                userIngredients: products,
-            })}
-        >
-            <Card style={styles.card}>
-                <View style={styles.cardHeader}>
-                    <Text style={styles.name}>{item.title}</Text>
-                    <Text style={styles.difficulty}>{DIFFICULTY_LABEL[item.difficulty] || item.difficulty}</Text>
-                </View>
-                {item.missing_ingredients.length > 0 ? (
-                    <Text style={styles.missing}>
-                        Нужно докупить ({item.missing_count}): {item.missing_ingredients.join(', ')}
-                    </Text>
-                ) : (
-                    <Text style={styles.allHave}>Все ингредиенты у тебя есть ✓</Text>
-                )}
-            </Card>
-        </TouchableOpacity>
+    const renderRecipe = ({ item, index }: { item: DishOut; index: number }) => (
+        <AnimatedListItem index={index} delayMs={45}>
+            <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                    Haptics.selectionAsync();
+                    navigation.navigate('RecipeDetail', { dish: item, userIngredients: products, imageUri });
+                }}
+            >
+                <Card style={styles.card}>
+                    <View style={styles.cardRow}>
+                        <Image source={dishImage(item.title)} style={styles.thumb} />
+                        <View style={styles.cardBody}>
+                            <View style={styles.cardHeader}>
+                                <Text style={styles.name} numberOfLines={2}>{tDish(item.title)}</Text>
+                                <Text style={styles.difficulty}>{t(`recipes.difficulty.${item.difficulty}`)}</Text>
+                            </View>
+                            {item.missing_ingredients.length > 0 ? (
+                                <Text style={styles.missing} numberOfLines={2}>
+                                    {t('recipes.needBuy', {
+                                        count: item.missing_count,
+                                        items: item.missing_ingredients.map(tProduct).join(', '),
+                                    })}
+                                </Text>
+                            ) : (
+                                <Text style={styles.allHave}>{t('recipes.allHave')}</Text>
+                            )}
+                        </View>
+                    </View>
+                </Card>
+            </TouchableOpacity>
+        </AnimatedListItem>
     );
 
     const renderSkeleton = () => (
@@ -82,15 +96,15 @@ export default function RecipeListScreen({ navigation, route }: any) {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>РЕЦЕПТЫ</Text>
+                <Text style={styles.title}>{t('recipes.title')}</Text>
                 <Text style={styles.subtitle}>
-                    {loading ? 'ПОДБИРАЕМ ЛУЧШЕЕ...' : `НАЙДЕНО ${filtered.length} БЛЮД`}
+                    {loading ? t('recipes.searching') : t('recipes.countFound', { count: filtered.length })}
                 </Text>
 
                 <View style={styles.searchContainer}>
                     <TextInput
                         style={styles.input}
-                        placeholder="ПОИСК РЕЦЕПТА..."
+                        placeholder={t('recipes.searchPlaceholder')}
                         placeholderTextColor={theme.colors.textSecondary}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -101,17 +115,14 @@ export default function RecipeListScreen({ navigation, route }: any) {
                     {(['easy', 'medium', 'hard'] as const).map(diff => (
                         <TouchableOpacity
                             key={diff}
-                            style={[
-                                styles.chip,
-                                filterDifficulty === diff && styles.chipActive,
-                            ]}
-                            onPress={() => setFilterDifficulty(filterDifficulty === diff ? null : diff)}
+                            style={[styles.chip, filterDifficulty === diff && styles.chipActive]}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                setFilterDifficulty(filterDifficulty === diff ? null : diff);
+                            }}
                         >
-                            <Text style={[
-                                styles.chipText,
-                                filterDifficulty === diff && styles.chipTextActive,
-                            ]}>
-                                {DIFFICULTY_LABEL[diff]}
+                            <Text style={[styles.chipText, filterDifficulty === diff && styles.chipTextActive]}>
+                                {t(`recipes.difficulty.${diff}`)}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -129,10 +140,44 @@ export default function RecipeListScreen({ navigation, route }: any) {
                     renderItem={renderRecipe}
                     contentContainerStyle={styles.list}
                     ListEmptyComponent={
-                        <Text style={styles.emptyText}>
-                            РЕЦЕПТЫ НЕ НАЙДЕНЫ.{'\n'}
-                            ПОПРОБУЙ ДРУГОЙ НАБОР ПРОДУКТОВ.
-                        </Text>
+                        <View style={styles.emptyWrap}>
+                            <Text style={styles.emptyEmoji}>🤖</Text>
+                            <Text style={styles.emptyTitle}>{t('recipes.empty')}</Text>
+                            <Text style={styles.emptyHint}>{t('recipes.emptyHint')}</Text>
+                            <TouchableOpacity
+                                style={styles.freeformButton}
+                                onPress={async () => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                    setGeneratingFreeform(true);
+                                    try {
+                                        const recipe = await dishesAPI.generateFreeForm(products, lang);
+                                        navigation.replace('RecipeDetail', {
+                                            dish: {
+                                                id: -1,
+                                                title: recipe.title,
+                                                difficulty: 'easy',
+                                                missing_count: 0,
+                                                missing_ingredients: [],
+                                            },
+                                            userIngredients: products,
+                                            imageUri,
+                                            preGenerated: recipe,
+                                        });
+                                    } catch (e: any) {
+                                        toast.show(e?.response?.data?.detail || t('detail.errGenerate'), 'error');
+                                    } finally {
+                                        setGeneratingFreeform(false);
+                                    }
+                                }}
+                                disabled={generatingFreeform}
+                            >
+                                {generatingFreeform ? (
+                                    <ActivityIndicator color={theme.colors.onPrimary} />
+                                ) : (
+                                    <Text style={styles.freeformText}>✨ {t('recipes.emptyCta')}</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
                     }
                 />
             )}
@@ -196,17 +241,33 @@ const styles = StyleSheet.create({
         paddingBottom: theme.spacing.xl,
     },
     card: {
-        padding: theme.spacing.m,
+        padding: theme.spacing.s,
+    },
+    cardRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.m,
+    },
+    thumb: {
+        width: 72,
+        height: 72,
+        borderRadius: theme.borderRadius.m,
+        backgroundColor: theme.colors.surfaceAlt,
+    },
+    cardBody: {
+        flex: 1,
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: theme.spacing.s,
+        gap: theme.spacing.s,
     },
     name: {
         ...theme.typography.h3,
         flex: 1,
+        fontSize: 16,
     },
     difficulty: {
         ...theme.typography.caption,
@@ -223,10 +284,18 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
         fontWeight: '600',
     },
-    emptyText: {
-        textAlign: 'center',
-        color: theme.colors.textSecondary,
-        marginTop: theme.spacing.xl,
-        lineHeight: 20,
+    emptyWrap: { alignItems: 'center', paddingTop: theme.spacing.xxl, paddingHorizontal: theme.spacing.l },
+    emptyEmoji: { fontSize: 56, marginBottom: theme.spacing.m },
+    emptyTitle: { ...theme.typography.h3, marginBottom: theme.spacing.s, textAlign: 'center' },
+    emptyHint: { ...theme.typography.body, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: theme.spacing.l },
+    freeformButton: {
+        backgroundColor: theme.colors.primary,
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderRadius: theme.borderRadius.m,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
+    freeformText: { color: theme.colors.onPrimary, fontWeight: '800', fontSize: 16 },
 });

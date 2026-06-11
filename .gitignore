@@ -14,6 +14,8 @@ ml_model/models/full_train.log
 .env.local
 *.api_key
 .roboflow*
+.unsplash_key
+.unsplash*
 .DS_Store
 *.log
 .idea/
@@ -22,3 +24,8 @@ ml_model/models/full_train.log
 *.pth
 datasets/
 !datasets/.gitkeep
+.coverage
+.pytest_cache/
+htmlcov/
+node_modules/
+.expo/

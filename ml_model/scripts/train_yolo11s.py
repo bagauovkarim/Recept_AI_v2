@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Train YOLOv11 on the Fridgify dataset."""
 
 from __future__ import annotations
 

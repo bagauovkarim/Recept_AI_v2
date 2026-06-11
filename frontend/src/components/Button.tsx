@@ -5,12 +5,13 @@ import { theme } from '../theme';
 interface ButtonProps {
     title: string;
     onPress: () => void;
-    variant?: 'primary' | 'secondary' | 'outline';
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
     loading?: boolean;
     disabled?: boolean;
     style?: ViewStyle;
     textStyle?: TextStyle;
     icon?: React.ReactNode;
+    size?: 'normal' | 'small';
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -22,15 +23,16 @@ export const Button: React.FC<ButtonProps> = ({
     style,
     textStyle,
     icon,
+    size = 'normal',
 }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const handlePressIn = () => {
         Animated.spring(scaleAnim, {
-            toValue: 0.95,
+            toValue: 0.97,
             useNativeDriver: true,
-            speed: 50,
-            bounciness: 10,
+            speed: 60,
+            bounciness: 8,
         }).start();
     };
 
@@ -43,26 +45,30 @@ export const Button: React.FC<ButtonProps> = ({
         }).start();
     };
 
+    const c = theme.colors;
     const getBackgroundColor = () => {
-        if (disabled) return theme.colors.border;
+        if (disabled) return c.border;
         switch (variant) {
-            case 'secondary': return theme.colors.secondary;
+            case 'secondary': return c.surface;
             case 'outline': return 'transparent';
-            default: return theme.colors.primary;
+            case 'ghost': return 'transparent';
+            default: return c.primary;
         }
     };
 
     const getTextColor = () => {
-        if (disabled) return theme.colors.textSecondary;
+        if (disabled) return c.textSecondary;
         switch (variant) {
-            case 'secondary': return theme.colors.text;
-            case 'outline': return theme.colors.primary;
-            default: return '#000000';
+            case 'secondary': return c.text;
+            case 'outline': return c.primary;
+            case 'ghost': return c.text;
+            default: return c.onPrimary;
         }
     };
 
     const getBorder = () => {
-        if (variant === 'outline') return { borderWidth: 2, borderColor: theme.colors.primary };
+        if (variant === 'outline') return { borderWidth: 2, borderColor: c.primary };
+        if (variant === 'secondary') return { borderWidth: 1, borderColor: c.border };
         return {};
     };
 
@@ -77,19 +83,27 @@ export const Button: React.FC<ButtonProps> = ({
             <Animated.View
                 style={[
                     styles.button,
+                    size === 'small' && styles.buttonSmall,
                     {
                         backgroundColor: getBackgroundColor(),
-                        transform: [{ scale: scaleAnim }]
+                        transform: [{ scale: scaleAnim }],
                     },
                     getBorder(),
                 ]}
             >
                 {loading ? (
-                    <ActivityIndicator color={variant === 'primary' ? '#000' : '#FFF'} />
+                    <ActivityIndicator color={variant === 'primary' ? c.onPrimary : c.text} />
                 ) : (
                     <>
                         {icon}
-                        <Text style={[styles.text, { color: getTextColor(), marginLeft: icon ? 8 : 0 }, textStyle]}>
+                        <Text
+                            style={[
+                                styles.text,
+                                size === 'small' && styles.textSmall,
+                                { color: getTextColor(), marginLeft: icon ? 8 : 0 },
+                                textStyle,
+                            ]}
+                        >
                             {title}
                         </Text>
                     </>
@@ -101,14 +115,21 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
     button: {
-        paddingVertical: theme.spacing.m + 4,
+        paddingVertical: theme.spacing.m,
         paddingHorizontal: theme.spacing.l,
-        borderRadius: 0,
+        borderRadius: theme.borderRadius.m,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
     },
+    buttonSmall: {
+        paddingVertical: 10,
+        paddingHorizontal: theme.spacing.m,
+    },
     text: {
         ...theme.typography.button,
+    },
+    textSmall: {
+        fontSize: 14,
     },
 });

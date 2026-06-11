@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
+import { StyleSheet, Animated, ViewStyle, DimensionValue } from 'react-native';
 import { theme } from '../theme';
 
 interface SkeletonProps {
-    width?: number | string;
-    height?: number | string;
+    width?: DimensionValue;
+    height?: DimensionValue;
     style?: ViewStyle;
     borderRadius?: number;
 }
@@ -13,7 +13,7 @@ export const SkeletonLoader: React.FC<SkeletonProps> = ({
     width = '100%',
     height = 20,
     style,
-    borderRadius = 0
+    borderRadius = 0,
 }) => {
     const opacity = useRef(new Animated.Value(0.3)).current;
 
@@ -41,12 +41,7 @@ export const SkeletonLoader: React.FC<SkeletonProps> = ({
         <Animated.View
             style={[
                 styles.skeleton,
-                {
-                    width,
-                    height,
-                    opacity,
-                    borderRadius,
-                },
+                { width, height, opacity, borderRadius } as any,
                 style,
             ]}
         />
